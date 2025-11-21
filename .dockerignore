@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project specific
+ignore/
+docs/
+scripts/
+tests/
+.git/
+.gitignore
+README.md
+LICENSE
+.env
+.env.*
+
+# Build artifacts
+*.egg-info/
+dist/
+build/

@@ -8,11 +8,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY app/common/ ./common/
-COPY app/follower/ ./follower/
+COPY app/ ./app/
+
+# Set PYTHONPATH to support both import styles
+ENV PYTHONPATH=/app
 
 # Expose port (configurable via env)
 EXPOSE 8000
 
 # Run follower
-CMD ["python", "-m", "follower.app"]
+CMD ["python", "-m", "app.follower.app"]

@@ -40,7 +40,11 @@ def replicate():
             {"status": "error", "error": "Content-Type must be application/json"}
         ), 400
 
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify({"status": "error", "error": f"Invalid JSON: {str(e)}"}), 400
+
     if "key" not in data or "value" not in data:
         return jsonify({"status": "error", "error": "Missing key or value"}), 400
 

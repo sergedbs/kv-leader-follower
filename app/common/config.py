@@ -40,6 +40,10 @@ class Config:
         # Validation
         if role not in ["leader", "follower"]:
             raise ValueError(f"Invalid ROLE: {role}")
+
+        if write_quorum < 1:
+            raise ValueError(f"WRITE_QUORUM must be >= 1, got {write_quorum}")
+
         if role == "leader":
             if not followers:
                 raise ValueError("Leader must have FOLLOWERS configured")
@@ -47,9 +51,6 @@ class Config:
                 raise ValueError(
                     f"WRITE_QUORUM ({write_quorum}) > followers ({len(followers)})"
                 )
-
-        if write_quorum < 1:
-            raise ValueError(f"WRITE_QUORUM must be >= 1, got {write_quorum}")
         if min_delay < 0 or max_delay < min_delay:
             raise ValueError(f"Invalid delay range: [{min_delay}, {max_delay}]")
 

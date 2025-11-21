@@ -1,4 +1,5 @@
 import time
+import atexit
 from typing import Optional
 from flask import Flask, request, jsonify
 from app.common.store import KeyValueStore
@@ -19,7 +20,10 @@ if config.followers:
         min_delay=config.min_delay,
         max_delay=config.max_delay,
         repl_secret=config.repl_secret,
+        log_level=config.log_level,
     )
+    # Register cleanup on app shutdown
+    atexit.register(replicator.close)
 
 
 @app.route("/health", methods=["GET"])
@@ -55,7 +59,11 @@ def set_key():
             {"status": "error", "error": "Content-Type must be application/json"}
         ), 400
 
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify({"status": "error", "error": f"Invalid JSON: {str(e)}"}), 400
+
     if "key" not in data or "value" not in data:
         return jsonify({"status": "error", "error": "Missing key or value"}), 400
 

@@ -5,8 +5,6 @@ from typing import List, Dict, Callable, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.common.logging_setup import setup_logging
 
-logger = setup_logging("INFO", "replicator")
-
 
 class ReplicationResult:
     """Result of replication to one follower."""
@@ -41,6 +39,7 @@ class Replicator:
         repl_secret: Optional[str] = None,
         timeout: float = 5.0,
         delay_func: Optional[Callable] = None,  # For testing
+        log_level: str = "INFO",
     ):
         self.followers = followers
         self.min_delay = min_delay
@@ -48,6 +47,7 @@ class Replicator:
         self.repl_secret = repl_secret
         self.timeout = timeout
         self.delay_func = delay_func or self._default_delay
+        self.logger = setup_logging(log_level, "replicator")
         self.session = requests.Session()
         self.executor = ThreadPoolExecutor(max_workers=len(followers))
 
@@ -106,7 +106,7 @@ class Replicator:
         for future in as_completed(futures):
             result = future.result()
             results.append(result)
-            logger.debug(
+            self.logger.debug(
                 f"Replication to {result.follower}: {result.status} ({result.latency_ms:.2f}ms)"
             )
 

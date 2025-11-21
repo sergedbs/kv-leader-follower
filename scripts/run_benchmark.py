@@ -145,9 +145,15 @@ def main():
     parser.add_argument(
         "--leader-url", default="http://localhost:8000", help="Leader URL"
     )
-    parser.add_argument("--writes", type=int, default=10000, help="Number of writes (default: 10000)")
-    parser.add_argument("--threads", type=int, default=15, help="Number of threads (default: 15)")
-    parser.add_argument("--keys", type=int, default=100, help="Number of unique keys (default: 100)")
+    parser.add_argument(
+        "--writes", type=int, default=10000, help="Number of writes (default: 10000)"
+    )
+    parser.add_argument(
+        "--threads", type=int, default=15, help="Number of threads (default: 15)"
+    )
+    parser.add_argument(
+        "--keys", type=int, default=100, help="Number of unique keys (default: 100)"
+    )
     parser.add_argument("--quorum", type=int, help="Write quorum value (for naming)")
     parser.add_argument("--trial", type=int, default=1, help="Trial number")
     parser.add_argument("--output-dir", default="results", help="Output directory")

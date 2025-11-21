@@ -207,7 +207,9 @@ def main():
         help="Number of concurrent threads (default: 15)",
     )
     parser.add_argument(
-        "--quick", action="store_true", help="Quick mode: fewer writes and trials (1000 writes, 1 trial)"
+        "--quick",
+        action="store_true",
+        help="Quick mode: fewer writes and trials (1000 writes, 1 trial)",
     )
     parser.add_argument(
         "--skip-docker-check", action="store_true", help="Skip Docker service checks"

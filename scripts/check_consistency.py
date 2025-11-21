@@ -152,7 +152,7 @@ def print_results(results):
 
     # Inconsistencies
     if results["summary"]["inconsistent_keys"]:
-        print(f"\nInconsistent Keys (first 10):")
+        print("\nInconsistent Keys (first 10):")
         for key in results["summary"]["inconsistent_keys"]:
             print(f"  - {key}")
 

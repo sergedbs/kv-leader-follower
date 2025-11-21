@@ -99,7 +99,7 @@ def generate_analysis(quorum_data, output_file: str):
             )
 
         f.write("\n## Analysis\n\n")
-        f.write("### Key Observations:\n\n")
+        f.write("### Key Observations\n\n")
 
         if len(quorum_data) > 1:
             quorums = sorted(quorum_data.keys())
@@ -131,13 +131,13 @@ def generate_analysis(quorum_data, output_file: str):
             )
             f.write("between consistency and performance\n\n")
 
-        f.write("### System Characteristics:\n\n")
+        f.write("### System Characteristics\n\n")
         f.write("- **Replication**: Semi-synchronous with configurable quorum\n")
         f.write("- **Network Delay**: Simulated 0.1-1ms per follower\n")
         f.write("- **Consistency**: At least N followers synchronized before success\n")
         f.write("- **Failure Handling**: Returns error when quorum not reached\n\n")
 
-        f.write("### Trade-offs:\n\n")
+        f.write("### Trade-offs\n\n")
         f.write(
             "- **Lower Quorum (1-2)**: Faster writes, lower consistency guarantee\n"
         )

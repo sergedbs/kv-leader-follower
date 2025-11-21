@@ -163,7 +163,7 @@ def print_results(results):
     )
 
     # Follower details
-    print(f"\nFollower Details:")
+    print("\nFollower Details:")
     for follower in results["followers"]:
         if "error" in follower:
             print(f"  ❌ {follower['name']}: {follower['error']}")

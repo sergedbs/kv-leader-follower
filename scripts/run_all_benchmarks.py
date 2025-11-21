@@ -132,10 +132,10 @@ def generate_plots():
     )
 
 
-def check_consistency(sample_size):
+def check_consistency():
     """Check consistency across followers."""
     return run_command(
-        f"python scripts/check_consistency.py --sample-size {sample_size}",
+        "python scripts/check_consistency.py",
         "Checking consistency across followers",
         check=False,  # Don't fail if consistency check fails
     )
@@ -149,21 +149,21 @@ def display_summary():
 
     # Check for results
     if os.path.exists("results"):
-        result_files = [f for f in os.listdir("results") if f.endswith(".csv")]
-        print(f"\n✅ Results: {len(result_files)} benchmark files in results/")
+        csv_files = [f for f in os.listdir("results") if f.endswith(".csv")]
+        print(f"\n✅ Benchmark Data: {len(csv_files)} CSV files in results/")
 
-    if os.path.exists("plots/analysis.md"):
-        print("✅ Analysis: plots/analysis.md")
+    if os.path.exists("results/analysis.md"):
+        print("✅ Analysis Report: results/analysis.md")
 
-    if os.path.exists("plots/quorum_vs_latency.png"):
-        print("✅ Plot: plots/quorum_vs_latency.png")
+    if os.path.exists("results/quorum_vs_latency.png"):
+        print("✅ Performance Plot: results/quorum_vs_latency.png")
 
     # Show analysis summary
-    if os.path.exists("plots/analysis.md"):
+    if os.path.exists("results/analysis.md"):
         print("\n" + "-" * 70)
-        print("Analysis Summary:")
+        print("Performance Results:")
         print("-" * 70)
-        with open("plots/analysis.md", "r") as f:
+        with open("results/analysis.md", "r") as f:
             lines = f.readlines()
             # Print the results table
             in_table = False
@@ -175,8 +175,8 @@ def display_summary():
                     break
 
     print("\n" + "=" * 70)
-    print("View full analysis: cat plots/analysis.md")
-    print("View plot: open plots/quorum_vs_latency.png")
+    print("View full analysis: cat results/analysis.md")
+    print("View plot: open results/quorum_vs_latency.png")
     print("=" * 70)
 
 
@@ -188,8 +188,8 @@ def main():
         "--quorums",
         type=int,
         nargs="+",
-        default=[1, 3, 5],
-        help="Quorum values to test (default: 1 3 5)",
+        default=[1, 2, 3, 4, 5],
+        help="Quorum values to test (default: 1 2 3 4 5)",
     )
     parser.add_argument(
         "--trials", type=int, default=2, help="Number of trials per quorum (default: 2)"
@@ -197,23 +197,17 @@ def main():
     parser.add_argument(
         "--writes",
         type=int,
-        default=1000,
-        help="Number of writes per trial (default: 1000)",
+        default=10000,
+        help="Number of writes per trial (default: 10000)",
     )
     parser.add_argument(
         "--threads",
         type=int,
-        default=10,
-        help="Number of concurrent threads (default: 10)",
+        default=15,
+        help="Number of concurrent threads (default: 15)",
     )
     parser.add_argument(
-        "--consistency-sample",
-        type=int,
-        default=20,
-        help="Number of keys to check for consistency (default: 20)",
-    )
-    parser.add_argument(
-        "--quick", action="store_true", help="Quick mode: fewer writes and trials"
+        "--quick", action="store_true", help="Quick mode: fewer writes and trials (1000 writes, 1 trial)"
     )
     parser.add_argument(
         "--skip-docker-check", action="store_true", help="Skip Docker service checks"
@@ -227,13 +221,12 @@ def main():
     # Quick mode overrides
     if args.quick:
         args.trials = 1
-        args.writes = 500
-        args.consistency_sample = 10
-        print("\n🚀 Quick mode enabled: reduced trials and writes")
+        args.writes = 1000
+        print("\n🚀 Quick mode enabled: 1000 writes, 1 trial per quorum")
 
     # Clean old results
     if args.clean:
-        run_command("rm -rf results/* plots/*", "Cleaning old results", check=False)
+        run_command("rm -rf results/*", "Cleaning old results", check=False)
 
     # Check/start Docker services
     if not args.skip_docker_check:
@@ -267,7 +260,7 @@ def main():
         sys.exit(1)
 
     # 3. Check consistency
-    if not check_consistency(args.consistency_sample):
+    if not check_consistency():
         print("\n⚠️  Consistency check detected inconsistencies")
 
     # Calculate duration

@@ -1,4 +1,3 @@
-import pytest
 import threading
 import time
 from app.common.store import KeyValueStore

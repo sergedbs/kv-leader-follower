@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  leader:
+    build:
+      context: .
+      dockerfile: Dockerfile.leader
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    environment:
+      - ROLE=leader
+      - PORT=8000
+      - FOLLOWERS=follower1:8001,follower2:8002,follower3:8003,follower4:8004,follower5:8005
+      - WRITE_QUORUM=3
+      - MIN_DELAY=0.0001
+      - MAX_DELAY=0.001
+      - LOG_LEVEL=INFO
+    networks:
+      - kv_net
+
+  follower1: &follower_base
+    build:
+      context: .
+      dockerfile: Dockerfile.follower
+    working_dir: /app
+    environment:
+      - ROLE=follower
+      - PORT=8001
+      - LOG_LEVEL=INFO
+    networks:
+      - kv_net
+
+  follower2:
+    <<: *follower_base
+    environment:
+      - ROLE=follower
+      - PORT=8002
+      - LOG_LEVEL=INFO
+
+  follower3:
+    <<: *follower_base
+    environment:
+      - ROLE=follower
+      - PORT=8003
+      - LOG_LEVEL=INFO
+
+  follower4:
+    <<: *follower_base
+    environment:
+      - ROLE=follower
+      - PORT=8004
+      - LOG_LEVEL=INFO
+
+  follower5:
+    <<: *follower_base
+    environment:
+      - ROLE=follower
+      - PORT=8005
+      - LOG_LEVEL=INFO
+
+networks:
+  kv_net:
+    driver: bridge

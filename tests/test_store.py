@@ -1,108 +1,87 @@
 import threading
-import time
+import pytest
 from app.common.store import KeyValueStore
 
 
-def test_store_initially_empty():
-    """Test that the store is empty on creation."""
-    store = KeyValueStore()
-    assert store.dump_all() == {}
+class TestKeyValueStore:
+    @pytest.fixture
+    def store(self):
+        return KeyValueStore()
 
+    def test_initial_state(self, store):
+        assert store.dump_all() == {}
+        assert store.get("missing") is None
 
-def test_set_and_get_single_key():
-    """Test setting and getting a single key."""
-    store = KeyValueStore()
-    store.set("key1", "value1")
-    assert store.get("key1") == "value1"
+    def test_basic_operations(self, store):
+        store.set("k", "v")
+        assert store.get("k") == "v"
 
+        # Overwrite
+        store.set("k", "v2")
+        assert store.get("k") == "v2"
 
-def test_get_non_existent_key():
-    """Test that getting a non-existent key returns None."""
-    store = KeyValueStore()
-    assert store.get("non_existent_key") is None
+    def test_dump_returns_copy(self, store):
+        store.set("k", "v")
+        dump = store.dump_all()
+        dump["k"] = "modified"
+        assert store.get("k") == "v"
 
+    def test_clear(self, store):
+        store.set("k", "v")
+        store.clear()
+        assert store.dump_all() == {}
 
-def test_overwrite_existing_key():
-    """Test that setting an existing key overwrites its value."""
-    store = KeyValueStore()
-    store.set("key1", "value1")
-    store.set("key1", "new_value")
-    assert store.get("key1") == "new_value"
+    def test_concurrent_writes(self, store):
+        """Test concurrent writes from multiple threads."""
+        num_threads = 10
+        ops_per_thread = 100
 
+        def writer(tid):
+            for i in range(ops_per_thread):
+                store.set(f"k_{tid}_{i}", "v")
 
-def test_dump_returns_copy():
-    """Test that dump_all returns a copy, not a reference."""
-    store = KeyValueStore()
-    store.set("key1", "value1")
-    dumped_store = store.dump_all()
-    dumped_store["key2"] = "value2"
-    assert "key2" not in store.dump_all()
+        threads = [
+            threading.Thread(target=writer, args=(i,)) for i in range(num_threads)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
 
+        assert len(store.dump_all()) == num_threads * ops_per_thread
 
-def test_clear_store():
-    """Test that clear removes all entries."""
-    store = KeyValueStore()
-    store.set("key1", "value1")
-    store.set("key2", "value2")
-    store.clear()
-    assert store.dump_all() == {}
+    def test_concurrent_reads_writes(self, store):
+        """Test concurrent reads while writes are happening."""
+        stop = threading.Event()
+        store.set("k0", "v0")
 
+        def writer():
+            i = 0
+            while not stop.is_set():
+                store.set(f"k{i}", f"v{i}")
+                i += 1
 
-def test_concurrent_writes():
-    """Test concurrent writes from multiple threads."""
-    store = KeyValueStore()
-    num_threads = 10
-    ops_per_thread = 100
-    threads = []
+        def reader():
+            count = 0
+            while not stop.is_set():
+                if store.get("k0") == "v0":
+                    count += 1
+            return count
 
-    def writer(thread_id):
-        for i in range(ops_per_thread):
-            key = f"key_{thread_id}_{i}"
-            value = f"value_{thread_id}_{i}"
-            store.set(key, value)
+        w = threading.Thread(target=writer)
+        r = threading.Thread(target=reader)
 
-    for i in range(num_threads):
-        thread = threading.Thread(target=writer, args=(i,))
-        threads.append(thread)
-        thread.start()
+        w.start()
+        r.start()
 
-    for thread in threads:
-        thread.join()
+        # Let them run briefly
+        import time
 
-    assert len(store.dump_all()) == num_threads * ops_per_thread
+        time.sleep(0.1)
+        stop.set()
 
+        w.join()
+        r.join()
 
-def test_concurrent_reads_and_writes():
-    """Test concurrent reads while writes are happening."""
-    store = KeyValueStore()
-    stop_event = threading.Event()
-
-    # Writer thread
-    def writer():
-        i = 0
-        while not stop_event.is_set():
-            store.set(f"key{i}", f"value{i}")
-            i += 1
-
-    # Reader thread
-    def reader():
-        read_count = 0
-        while not stop_event.is_set():
-            value = store.get("key0")
-            if value is not None:
-                assert value == "value0"
-            read_count += 1
-        return read_count
-
-    store.set("key0", "value0")
-    writer_thread = threading.Thread(target=writer)
-    reader_thread = threading.Thread(target=reader)
-
-    writer_thread.start()
-    reader_thread.start()
-
-    time.sleep(0.1)
-    stop_event.set()
-
-    writer_thread.join()
-    reader_thread.join()
+        # Just ensure no crashes/deadlocks occurred
+        assert store.get("k0") == "v0"

@@ -245,3 +245,21 @@ def read_key(url: str, key: str) -> Tuple[bool, Optional[str]]:
         return False, None
     except requests.exceptions.RequestException:
         return False, None
+
+
+def update_leader_config(leader_url: str, config: Dict) -> bool:
+    """
+    Update leader configuration dynamically.
+
+    Args:
+        leader_url: Base URL of the leader
+        config: Dictionary of configuration updates
+
+    Returns:
+        True if update succeeded
+    """
+    try:
+        response = requests.post(f"{leader_url}/config", json=config, timeout=5)
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False

@@ -70,15 +70,15 @@ def set_key():
     key = data["key"]
     value = data["value"]
 
-    # Step 1: Write locally
-    store.set(key, value)
-    logger.info(f"Local write: {key}={value}")
+    # Step 1: Write locally and get version
+    version = store.set(key, value)
+    logger.info(f"Local write: {key}={value} (v{version})")
 
     # Step 2: Replicate to followers
     if replicator:
         # Pass write_quorum to allow early return once consistency is satisfied
         replication_results = replicator.replicate(
-            key, value, quorum=config.write_quorum
+            key, value, version, quorum=config.write_quorum
         )
     else:
         replication_results = []

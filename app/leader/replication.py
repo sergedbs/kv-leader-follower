@@ -62,7 +62,7 @@ class Replicator:
         return random.uniform(self.min_delay, self.max_delay)
 
     def _replicate_to_one(
-        self, follower: str, key: str, value: str
+        self, follower: str, key: str, value: str, version: int
     ) -> ReplicationResult:
         """Replicate to a single follower."""
         start = time.time()
@@ -80,7 +80,7 @@ class Replicator:
 
             response = self.session.post(
                 url,
-                json={"key": key, "value": value},
+                json={"key": key, "value": value, "version": version},
                 headers=headers,
                 timeout=self.timeout,
             )
@@ -102,7 +102,7 @@ class Replicator:
             return ReplicationResult(follower, "error", elapsed_ms, str(e))
 
     def replicate(
-        self, key: str, value: str, quorum: int = 0
+        self, key: str, value: str, version: int, quorum: int = 0
     ) -> List[ReplicationResult]:
         """
         Replicate key-value to all followers concurrently.
@@ -110,11 +110,14 @@ class Replicator:
         Args:
             key: The key to replicate
             value: The value to replicate
+            version: The version number of the write
             quorum: If > 0, return as soon as this many successful replications occur.
                    If 0, wait for all followers to respond.
         """
         futures = {
-            self.executor.submit(self._replicate_to_one, follower, key, value): follower
+            self.executor.submit(
+                self._replicate_to_one, follower, key, value, version
+            ): follower
             for follower in self.followers
         }
 

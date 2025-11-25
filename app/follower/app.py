@@ -57,8 +57,12 @@ def replicate():
     # Apply write
     key = data["key"]
     value = data["value"]
-    store.set(key, value)
-    logger.info(f"Replicated: {key}={value}")
+    version = data.get(
+        "version"
+    )  # Optional for backward compatibility, but recommended
+
+    store.set(key, value, version=version)
+    logger.info(f"Replicated: {key}={value} (v{version})")
 
     return jsonify({"status": "ok"}), 200
 

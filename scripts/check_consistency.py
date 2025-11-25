@@ -141,12 +141,12 @@ def check_consistency(leader_url: str, containers: dict):
 
 def print_results(results):
     """Print consistency check results in human-readable format."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 60)
     print("CONSISTENCY CHECK RESULTS")
-    print("=" * 70)
+    print("=" * 60)
 
     if "error" in results:
-        print(f"\n❌ ERROR: {results['error']}")
+        print(f"\nERROR: {results['error']}")
         return
 
     # Leader info
@@ -154,9 +154,8 @@ def print_results(results):
     print(f"Total Keys: {results['leader']['keys']}")
 
     # Overall status
-    print(
-        f"\nOverall Status: {'✅ CONSISTENT' if results['consistent'] else '❌ INCONSISTENT'}"
-    )
+    status = "CONSISTENT" if results["consistent"] else "INCONSISTENT"
+    print(f"\nOverall Status: {status}")
     print(
         f"Consistent Followers: {results['summary']['consistent_followers']}/{results['summary']['total_followers']} "
         f"({results['summary']['consistency_percentage']:.1f}%)"
@@ -166,23 +165,23 @@ def print_results(results):
     print("\nFollower Details:")
     for follower in results["followers"]:
         if "error" in follower:
-            print(f"  ❌ {follower['name']}: {follower['error']}")
+            print(f"  {follower['name']}: ERROR - {follower['error']}")
         elif follower["consistent"]:
             print(
-                f"  ✅ {follower['name']}: {follower['keys']} keys (port {follower['port']})"
+                f"  {follower['name']}: {follower['keys']} keys (port {follower['port']}) - OK"
             )
         else:
             print(
-                f"  ❌ {follower['name']}: {follower['keys']} keys (port {follower['port']}) - INCONSISTENT"
+                f"  {follower['name']}: {follower['keys']} keys (port {follower['port']}) - INCONSISTENT"
             )
             if follower["missing_keys"]:
-                print(f"     Missing keys: {len(follower['missing_keys'])}")
+                print(f"    Missing keys: {len(follower['missing_keys'])}")
             if follower["extra_keys"]:
-                print(f"     Extra keys: {len(follower['extra_keys'])}")
+                print(f"    Extra keys: {len(follower['extra_keys'])}")
             if follower["mismatched_values"]:
-                print(f"     Mismatched values: {len(follower['mismatched_values'])}")
+                print(f"    Mismatched values: {len(follower['mismatched_values'])}")
 
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 60)
 
 
 def main():

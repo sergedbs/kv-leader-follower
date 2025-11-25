@@ -25,14 +25,14 @@ import requests
 
 def run_command(cmd, description, check=True):
     """Run a shell command and handle errors."""
-    print(f"\n{'=' * 70}")
-    print(f"▶ {description}")
-    print(f"{'=' * 70}")
+    print(f"\n{'=' * 60}")
+    print(f"Running: {description}")
+    print(f"{'=' * 60}")
 
     result = subprocess.run(cmd, shell=True, capture_output=False, text=True)
 
     if check and result.returncode != 0:
-        print(f"\n❌ Failed: {description}")
+        print(f"\nFailed: {description}")
         sys.exit(1)
 
     return result.returncode == 0
@@ -40,16 +40,16 @@ def run_command(cmd, description, check=True):
 
 def check_docker_services():
     """Check if Docker services are running."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 60)
     print("Checking Docker Services")
-    print("=" * 70)
+    print("=" * 60)
 
     result = subprocess.run(
         "docker compose ps --format json", shell=True, capture_output=True, text=True
     )
 
     if result.returncode != 0:
-        print("❌ Docker Compose not available")
+        print("Docker Compose not available")
         return False
 
     # Check if containers are running
@@ -62,10 +62,10 @@ def check_docker_services():
 
     running = int(result.stdout.strip())
     if running < 6:
-        print(f"⚠️  Only {running}/6 containers running")
+        print(f"Only {running}/6 containers running")
         return False
 
-    print("✅ All 6 containers are running")
+    print("All 6 containers are running")
     return True
 
 
@@ -80,20 +80,20 @@ def start_docker_services():
         try:
             resp = requests.get("http://localhost:8000/health", timeout=2)
             if resp.status_code == 200:
-                print(" ✅")
+                print(" OK")
                 return True
         except Exception:
             print(".", end="", flush=True)
 
-    print(" ⚠️  Services may not be fully ready")
+    print(" Services may not be fully ready")
     return True
 
 
 def run_benchmarks(quorums, trials, writes, threads):
     """Run benchmarks for specified quorum values."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 60)
     print("Running Benchmarks")
-    print("=" * 70)
+    print("=" * 60)
     print(f"Quorums: {quorums}")
     print(f"Trials per quorum: {trials}")
     print(f"Writes per trial: {writes}")
@@ -118,18 +118,16 @@ def run_benchmarks(quorums, trials, writes, threads):
 
             result = subprocess.run(cmd, shell=True)
             if result.returncode != 0:
-                print(f"❌ Benchmark failed for quorum={quorum}, trial={trial}")
+                print(f"Benchmark failed for quorum={quorum}, trial={trial}")
                 return False
 
-    print(f"\n✅ All {total} benchmarks completed successfully")
+    print(f"\nAll {total} benchmarks completed successfully")
     return True
 
 
 def generate_plots():
-    """Generate plots and analysis from benchmark results."""
-    return run_command(
-        "python scripts/plot_results.py", "Generating plots and analysis"
-    )
+    """Generate plots from benchmark results."""
+    return run_command("python scripts/plot_results.py", "Generating plots")
 
 
 def check_consistency():
@@ -143,41 +141,21 @@ def check_consistency():
 
 def display_summary():
     """Display summary of results."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 60)
     print("BENCHMARK SUITE COMPLETE")
-    print("=" * 70)
+    print("=" * 60)
 
     # Check for results
     if os.path.exists("results"):
         csv_files = [f for f in os.listdir("results") if f.endswith(".csv")]
-        print(f"\n✅ Benchmark Data: {len(csv_files)} CSV files in results/")
-
-    if os.path.exists("results/analysis.md"):
-        print("✅ Analysis Report: results/analysis.md")
+        print(f"\nBenchmark Data: {len(csv_files)} CSV files in results/")
 
     if os.path.exists("results/quorum_vs_latency.png"):
-        print("✅ Performance Plot: results/quorum_vs_latency.png")
+        print("Performance Plot: results/quorum_vs_latency.png")
 
-    # Show analysis summary
-    if os.path.exists("results/analysis.md"):
-        print("\n" + "-" * 70)
-        print("Performance Results:")
-        print("-" * 70)
-        with open("results/analysis.md", "r") as f:
-            lines = f.readlines()
-            # Print the results table
-            in_table = False
-            for line in lines:
-                if line.startswith("|"):
-                    in_table = True
-                    print(line.rstrip())
-                elif in_table and not line.strip():
-                    break
-
-    print("\n" + "=" * 70)
-    print("View full analysis: cat results/analysis.md")
+    print("\n" + "=" * 60)
     print("View plot: open results/quorum_vs_latency.png")
-    print("=" * 70)
+    print("=" * 60)
 
 
 def main():
@@ -223,8 +201,8 @@ def main():
     # Quick mode overrides
     if args.quick:
         args.trials = 1
-        args.writes = 1000
-        print("\n🚀 Quick mode enabled: 1000 writes, 1 trial per quorum")
+        args.writes = 20
+        print("\nQuick mode enabled: 20 writes, 1 trial per quorum")
 
     # Clean old results
     if args.clean:
@@ -233,19 +211,19 @@ def main():
     # Check/start Docker services
     if not args.skip_docker_check:
         if not check_docker_services():
-            print("\n⚠️  Docker services not running. Starting them...")
+            print("\nDocker services not running. Starting them...")
             if not start_docker_services():
-                print("\n❌ Failed to start Docker services")
+                print("\nFailed to start Docker services")
                 sys.exit(1)
         else:
             # Verify leader is accessible
             try:
                 resp = requests.get("http://localhost:8000/health", timeout=5)
                 if resp.status_code != 200:
-                    print("\n❌ Leader not responding correctly")
+                    print("\nLeader not responding correctly")
                     sys.exit(1)
             except Exception as e:
-                print(f"\n❌ Cannot reach leader: {e}")
+                print(f"\nCannot reach leader: {e}")
                 sys.exit(1)
 
     # Run benchmark suite
@@ -253,24 +231,24 @@ def main():
 
     # 1. Run benchmarks
     if not run_benchmarks(args.quorums, args.trials, args.writes, args.threads):
-        print("\n❌ Benchmarks failed")
+        print("\nBenchmarks failed")
         sys.exit(1)
 
     # 2. Generate plots
     if not generate_plots():
-        print("\n❌ Plot generation failed")
+        print("\nPlot generation failed")
         sys.exit(1)
 
     # 3. Check consistency
     if not check_consistency():
-        print("\n⚠️  Consistency check detected inconsistencies")
+        print("\nConsistency check detected inconsistencies")
 
     # Calculate duration
     duration = time.time() - start_time
     minutes = int(duration // 60)
     seconds = int(duration % 60)
 
-    print(f"\n⏱️  Total time: {minutes}m {seconds}s")
+    print(f"\nTotal time: {minutes}m {seconds}s")
 
     # Display summary
     display_summary()

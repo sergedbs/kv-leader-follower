@@ -117,22 +117,19 @@ def run_benchmark(
         p95 = latencies_sorted[int(len(latencies_sorted) * 0.95)]
         p99 = latencies_sorted[int(len(latencies_sorted) * 0.99)]
 
-        print("\n=== Results ===")
-        print(f"Total time: {total_time:.2f}s")
-        print(f"Throughput: {num_writes / total_time:.1f} writes/sec")
-        print(f"Total writes: {len(results)}")
+        print("\n=== Benchmark Results ===")
         print(
-            f"Successful: {len(successful)} ({len(successful) / len(results) * 100:.1f}%)"
+            f"Time: {total_time:.2f}s | Throughput: {num_writes / total_time:.1f} ops/s"
         )
-        print(f"Failed: {len(results) - len(successful)}")
-        print("\nLatency Statistics (ms):")
-        print(f"  Average: {avg_latency:.2f}")
-        print(f"  Min: {min_latency:.2f}")
-        print(f"  Max: {max_latency:.2f}")
-        print(f"  P50: {p50:.2f}")
-        print(f"  P95: {p95:.2f}")
-        print(f"  P99: {p99:.2f}")
-        print(f"\nResults saved to: {output_file}")
+        print(
+            f"Writes: {len(results)} | Success: {len(successful)} ({len(successful) / len(results) * 100:.1f}%) | Failed: {len(results) - len(successful)}"
+        )
+        print("\nLatency (ms):")
+        print(
+            f"  Avg: {avg_latency:.2f} | Min: {min_latency:.2f} | Max: {max_latency:.2f}"
+        )
+        print(f"  P50: {p50:.2f} | P95: {p95:.2f} | P99: {p99:.2f}")
+        print(f"\nSaved to: {output_file}")
 
         return avg_latency
     else:
@@ -164,6 +161,20 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     if args.quorum:
+        # Update leader configuration
+        try:
+            resp = requests.post(
+                f"{args.leader_url}/config",
+                json={"write_quorum": args.quorum},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                print(f"Updated leader write_quorum to {args.quorum}")
+            else:
+                print(f"Failed to update quorum: {resp.text}")
+        except Exception as e:
+            print(f"Error updating quorum: {e}")
+
         output_file = f"{args.output_dir}/quorum_{args.quorum}_trial_{args.trial}.csv"
     else:
         output_file = f"{args.output_dir}/benchmark_trial_{args.trial}.csv"

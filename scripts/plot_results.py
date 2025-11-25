@@ -60,125 +60,9 @@ def load_results(results_dir: str):
     return quorum_data
 
 
-def generate_analysis(quorum_data, output_file: str, plot_file: str):
-    """
-    Generate dynamic analysis of results with embedded plot.
-
-    Args:
-        quorum_data: Dictionary mapping quorum to list of latencies
-        output_file: Path to save analysis markdown
-        plot_file: Path to the generated plot image
-    """
-    with open(output_file, "w") as f:
-        f.write("# Performance Analysis: Write Quorum vs Latency\n\n")
-
-        # Embed the plot
-        plot_filename = os.path.basename(plot_file)
-        f.write(f"![Write Quorum vs Latency]({plot_filename})\n\n")
-
-        f.write("## Benchmark Configuration\n\n")
-        f.write("- **Total Writes**: ~10,000 concurrent writes\n")
-        f.write("- **Concurrency**: >10 threads\n")
-        f.write("- **Key Space**: 100 unique keys\n")
-        f.write("- **Quorum Values Tested**: 1-5\n")
-        f.write("- **Network Delay**: 1-10ms simulated per follower\n\n")
-
-        f.write("## Results Summary\n\n")
-        f.write(
-            "| Quorum | Avg Latency (ms) | Std Dev (ms) | Min (ms) | Max (ms) | P50 (ms) | P95 (ms) | P99 (ms) | Samples |\n"
-        )
-        f.write(
-            "|--------|------------------|--------------|----------|----------|----------|----------|----------|----------|\n"
-        )
-
-        stats = {}
-        for q in sorted(quorum_data.keys()):
-            latencies = quorum_data[q]
-            if not latencies:
-                continue
-
-            avg = sum(latencies) / len(latencies)
-            variance = sum((x - avg) ** 2 for x in latencies) / len(latencies)
-            std = variance**0.5
-            min_lat = min(latencies)
-            max_lat = max(latencies)
-
-            sorted_lat = sorted(latencies)
-            p50 = sorted_lat[len(sorted_lat) // 2]
-            p95 = sorted_lat[int(len(sorted_lat) * 0.95)]
-            p99 = sorted_lat[int(len(sorted_lat) * 0.99)]
-
-            stats[q] = {
-                "avg": avg,
-                "std": std,
-                "min": min_lat,
-                "max": max_lat,
-                "p50": p50,
-                "p95": p95,
-                "p99": p99,
-                "samples": len(latencies),
-            }
-
-            f.write(
-                f"| {q} | {avg:.2f} | {std:.2f} | {min_lat:.2f} | {max_lat:.2f} | {p50:.2f} | {p95:.2f} | {p99:.2f} | {len(latencies)} |\n"
-            )
-
-        f.write("\n## Performance Analysis\n\n")
-
-        if len(stats) > 1:
-            quorums = sorted(stats.keys())
-            avgs = [stats[q]["avg"] for q in quorums]
-
-            min_q = quorums[avgs.index(min(avgs))]
-            max_q = quorums[avgs.index(max(avgs))]
-            min_avg = min(avgs)
-            max_avg = max(avgs)
-
-            f.write(f"### Latency vs Quorum Relationship\n\n")
-            f.write(f"- **Minimum latency**: {min_avg:.2f}ms at quorum={min_q}\n")
-            f.write(f"- **Maximum latency**: {max_avg:.2f}ms at quorum={max_q}\n")
-            f.write(
-                f"- **Latency increase**: {max_avg - min_avg:.2f}ms ({((max_avg / min_avg - 1) * 100):.1f}% increase from quorum={min_q} to quorum={max_q})\n\n"
-            )
-
-            # Calculate trend
-            if max_avg > min_avg * 1.1:  # More than 10% increase
-                f.write(
-                    "The data shows that **higher quorum values result in increased write latency**. "
-                )
-                f.write(
-                    "This is expected because the leader must wait for acknowledgments from more followers "
-                )
-                f.write("before responding to the client.\n\n")
-            else:
-                f.write(
-                    "The data shows **minimal latency variation** across quorum values. "
-                )
-                f.write(
-                    "This suggests that network delays and parallel replication effectively mask "
-                )
-                f.write(
-                    "the quorum synchronization overhead in this configuration.\n\n"
-                )
-
-            # Per-quorum breakdown
-            f.write("### Per-Quorum Analysis\n\n")
-            for q in quorums:
-                s = stats[q]
-                f.write(f"**Quorum {q}**:\n")
-                f.write(f"- Average latency: {s['avg']:.2f}ms (±{s['std']:.2f}ms)\n")
-                f.write(f"- Median (P50): {s['p50']:.2f}ms\n")
-                f.write(f"- 95th percentile: {s['p95']:.2f}ms\n")
-                f.write(
-                    f"- Consistency guarantee: At least {q} out of 5 followers synchronized\n\n"
-                )
-
-    print(f"Analysis saved to: {output_file}")
-
-
 def plot_with_matplotlib(quorum_data, output_file: str):
     """
-    Generate plot using matplotlib.
+    Generate simple statistics plot using matplotlib.
 
     Args:
         quorum_data: Dictionary mapping quorum to list of latencies
@@ -189,52 +73,67 @@ def plot_with_matplotlib(quorum_data, output_file: str):
         import numpy as np
     except ImportError:
         print("matplotlib not available, skipping plot generation")
-        print("Install with: pip install matplotlib numpy")
         return
 
     quorums = sorted(quorum_data.keys())
-    avg_latencies = []
-    std_latencies = []
+    means = []
+    medians = []
+    mins = []
+    maxs = []
 
     for q in quorums:
-        latencies = quorum_data[q]
-        avg_latencies.append(np.mean(latencies))
-        std_latencies.append(np.std(latencies))
+        data = quorum_data[q]
+        means.append(np.mean(data))
+        medians.append(np.median(data))
+        mins.append(np.min(data))
+        maxs.append(np.max(data))
 
     plt.figure(figsize=(10, 6))
-    plt.errorbar(
-        quorums,
-        avg_latencies,
-        yerr=std_latencies,
-        marker="o",
-        capsize=5,
-        capthick=2,
-        linewidth=2,
-        markersize=8,
-        label="Average Latency ± Std Dev",
-    )
+
+    # Plot lines
+    plt.plot(quorums, maxs, "r--", label="Max", alpha=0.5)
+    plt.plot(quorums, means, "b-o", label="Mean", linewidth=2)
+    plt.plot(quorums, medians, "g-s", label="Median", linewidth=2)
+    plt.plot(quorums, mins, "k--", label="Min", alpha=0.5)
+
+    # Fill between min and max
+    plt.fill_between(quorums, mins, maxs, color="gray", alpha=0.1)
+
     plt.xlabel("Write Quorum", fontsize=12)
-    plt.ylabel("Average Write Latency (ms)", fontsize=12)
-    plt.title("Write Quorum vs Average Latency", fontsize=14)
+    plt.ylabel("Latency (ms)", fontsize=12)
+    plt.title("Write Latency Statistics by Quorum", fontsize=14)
+    plt.legend()
     plt.grid(True, alpha=0.3)
     plt.xticks(quorums)
-    plt.legend()
-
-    # Add value labels
-    for q, lat in zip(quorums, avg_latencies):
-        plt.text(
-            q,
-            lat + max(avg_latencies) * 0.02,
-            f"{lat:.2f}ms",
-            ha="center",
-            va="bottom",
-            fontsize=10,
-        )
 
     plt.tight_layout()
     plt.savefig(output_file, dpi=300)
     print(f"Plot saved to: {output_file}")
     plt.close()
+
+
+def print_summary_table(quorum_data):
+    """Print a summary table of results to the console."""
+    print("\n" + "=" * 65)
+    print(
+        f"{'Quorum':<8} | {'Avg (ms)':<12} | {'Min (ms)':<10} | {'Max (ms)':<10} | {'Samples':<8}"
+    )
+    print("-" * 65)
+
+    for q in sorted(quorum_data.keys()):
+        latencies = quorum_data[q]
+        if not latencies:
+            continue
+
+        avg = sum(latencies) / len(latencies)
+        min_lat = min(latencies)
+        max_lat = max(latencies)
+
+        print(
+            f"{q:<8} | {avg:<12.2f} | {min_lat:<10.2f} | {max_lat:<10.2f} | {len(latencies):<8}"
+        )
+
+    print("=" * 65 + "\n")
 
 
 def main():
@@ -265,14 +164,13 @@ def main():
 
     print(f"Found data for quorum values: {sorted(quorum_data.keys())}")
 
-    # Generate plot first
+    # Print summary table
+    print_summary_table(quorum_data)
+
+    # Generate plot
     plot_file = os.path.join(args.output_dir, "quorum_vs_latency.png")
     if not args.no_plot:
         plot_with_matplotlib(quorum_data, plot_file)
-
-    # Generate analysis with embedded plot
-    analysis_file = os.path.join(args.output_dir, "analysis.md")
-    generate_analysis(quorum_data, analysis_file, plot_file)
 
 
 if __name__ == "__main__":

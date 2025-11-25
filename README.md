@@ -24,8 +24,9 @@ A distributed key-value store implementation with single-leader replication and 
 - **Single-Leader Replication**: Write operations go through the leader, which replicates to followers
 - **Configurable Write Quorum**: Set minimum number of successful replications (1-5)
 - **Semi-Synchronous Replication**: Leader writes locally first, then replicates in parallel
+- **Data Versioning**: Lamport timestamps ensure consistency despite message reordering
 - **Thread-Safe Operations**: Concurrent request handling with proper locking
-- **Network Delay Simulation**: Configurable network delays (~0.1-1ms) for realistic testing
+- **Network Delay Simulation**: Configurable network delays (~0.1-1000ms) for realistic testing
 - **Consistency Verification**: Tools to verify data consistency across all replicas
 - **Performance Benchmarking**: Comprehensive benchmarking suite with visualization
 - **Docker Orchestration**: Easy deployment with Docker Compose
@@ -36,7 +37,7 @@ A distributed key-value store implementation with single-leader replication and 
 
 Single-leader replication with configurable quorum-based consistency.
 
-**Write Flow**: Client → Leader (local write + spawn parallel replication) → Wait for quorum acks → Respond  
+**Write Flow**: Client → Leader (local write + version increment + spawn parallel replication) → Wait for quorum acks → Respond  
 **Read Flow**: Any node returns local value
 
 **Consistency Levels**:
@@ -194,7 +195,7 @@ Configuration is managed through environment variables defined in `app/common/co
 | `WRITE_QUORUM` | `3` | n/a | Min successful replications |
 | `REPL_SECRET` | `secret` | `secret` | Replication auth secret |
 | `MIN_DELAY` | `0.0001` | n/a | Min network delay (seconds) |
-| `MAX_DELAY` | `0.001` | n/a | Max network delay (seconds) |
+| `MAX_DELAY` | `1.0` | n/a | Max network delay (seconds) |
 | `LOG_LEVEL` | `INFO` | `INFO` | Logging verbosity |
 
 **Example**:
@@ -204,7 +205,7 @@ ROLE=leader \
 FOLLOWERS=f1:8001,f2:8002,f3:8003,f4:8004,f5:8005 \
 WRITE_QUORUM=4 \
 MIN_DELAY=0.0001 \
-MAX_DELAY=0.001 \
+MAX_DELAY=1.0 \
 python -m app.leader.app
 ```
 
@@ -234,11 +235,10 @@ python scripts/run_benchmark.py --writes 10000 --threads 15 --quorum 3 --keys 10
 Results in `results/`:
 
 - CSV files with latency data per quorum
-- `analysis.md` with metrics table and embedded plot
 - `quorum_vs_latency.png` visualization
 
 ```bash
-python scripts/plot_results.py  # Regenerate analysis and plot
+python scripts/plot_results.py  # Regenerate plot
 ```
 
 ### Consistency Check
@@ -249,17 +249,21 @@ python scripts/check_consistency.py  # Verify all replicas match leader
 
 ### Expected Performance
 
-With ~0.1-1ms network delay, parallel replication minimizes quorum overhead:
+With ~0.1-1000ms network delay, the impact of quorum size becomes dramatic:
 
 ```txt
-| Quorum | Avg Lat (ms) | P50    | P95    | P99    | Samples |
-|--------|--------------|--------|--------|--------|---------|  
-| 1      | 112.44       | 110.35 | 126.26 | 180.01 | 10000   |
-| 3      | 110.12       | 109.45 | 121.45 | 173.13 | 10000   |
-| 5      | 108.25       | 108.46 | 118.97 | 124.03 | 10000   |
+=================================================================
+Quorum   | Avg (ms)     | Min (ms)   | Max (ms)   | Samples 
+-----------------------------------------------------------------
+1        | 234.17       | 20.80      | 710.23     | 200     
+2        | 338.61       | 27.02      | 842.09     | 200     
+3        | 522.16       | 102.21     | 896.37     | 200     
+4        | 686.95       | 157.79     | 987.30     | 200     
+5        | 849.67       | 124.21     | 1014.41    | 200     
+=================================================================
 ```
 
-*Higher quorums may show increased tail latency as leader waits for slowest follower.*
+*Note: With 5 followers and uniform random delay (0-1s), Q=1 waits for the fastest, while Q=5 waits for the slowest. The base overhead (Docker networking + HTTP) adds ~150ms.*
 
 ## API Reference
 
@@ -390,7 +394,8 @@ X-Replication-Secret: secret
 
 {
   "key": "username",
-  "value": "alice"
+  "value": "alice",
+  "version": 1
 }
 ```
 

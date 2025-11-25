@@ -31,7 +31,7 @@ class Config:
         )
         write_quorum = int(os.getenv("WRITE_QUORUM", "1"))
         min_delay = float(os.getenv("MIN_DELAY", "0.0001"))
-        max_delay = float(os.getenv("MAX_DELAY", "0.001"))
+        max_delay = float(os.getenv("MAX_DELAY", "1.0"))
 
         # Common config
         repl_secret = os.getenv("REPL_SECRET")

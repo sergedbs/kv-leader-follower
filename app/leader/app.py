@@ -76,7 +76,10 @@ def set_key():
 
     # Step 2: Replicate to followers
     if replicator:
-        replication_results = replicator.replicate(key, value)
+        # Pass write_quorum to allow early return once consistency is satisfied
+        replication_results = replicator.replicate(
+            key, value, quorum=config.write_quorum
+        )
     else:
         replication_results = []
 
@@ -106,6 +109,71 @@ def set_key():
         response["status"] = "error"
         response["error"] = "Quorum not reached"
         return jsonify(response), 500
+
+
+@app.route("/config", methods=["POST"])
+def update_config():
+    if not request.is_json:
+        return jsonify(
+            {"status": "error", "error": "Content-Type must be application/json"}
+        ), 400
+
+    data = request.get_json()
+
+    # Define updates: (json_key, type_func, validator, error_msg, config_attr, replicator_attr)
+    updates = [
+        (
+            "write_quorum",
+            int,
+            lambda x: x >= 1,
+            "Quorum must be >= 1",
+            "write_quorum",
+            None,
+        ),
+        (
+            "min_delay",
+            float,
+            lambda x: x >= 0,
+            "min_delay must be >= 0",
+            "min_delay",
+            "min_delay",
+        ),
+        (
+            "max_delay",
+            float,
+            lambda x: x >= 0,
+            "max_delay must be >= 0",
+            "max_delay",
+            "max_delay",
+        ),
+    ]
+
+    for key, type_func, validator, err_msg, conf_attr, repl_attr in updates:
+        if key in data:
+            try:
+                val = type_func(data[key])
+                if not validator(val):
+                    return jsonify({"status": "error", "error": err_msg}), 400
+
+                setattr(config, conf_attr, val)
+                if repl_attr and replicator:
+                    setattr(replicator, repl_attr, val)
+                logger.info(f"Updated {conf_attr} to {val}")
+            except ValueError:
+                return jsonify(
+                    {"status": "error", "error": f"Invalid {key} value"}
+                ), 400
+
+    return jsonify(
+        {
+            "status": "ok",
+            "config": {
+                "write_quorum": config.write_quorum,
+                "min_delay": config.min_delay,
+                "max_delay": config.max_delay,
+            },
+        }
+    ), 200
 
 
 if __name__ == "__main__":

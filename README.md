@@ -126,7 +126,7 @@ curl http://localhost:8000/health
 ### Setup
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/sergedbs/kv-leader-follower.git # SSH: git@github.com:sergedbs/kv-leader-follower.git
 cd kv-leader-follower
 python3 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate

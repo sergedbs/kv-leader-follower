@@ -36,7 +36,7 @@ class TestReplication:
         with patch.object(replicator.session, "post") as mock_post:
             mock_post.return_value.status_code = 200
 
-            res = replicator._replicate_to_one("host1:8001", "k", "v")
+            res = replicator._replicate_to_one("host1:8001", "k", "v", 1)
 
             assert res.status == "ok"
             assert res.error is None
@@ -47,7 +47,7 @@ class TestReplication:
             mock_post.return_value.status_code = 500
             mock_post.return_value.text = "Error"
 
-            res = replicator._replicate_to_one("host1:8001", "k", "v")
+            res = replicator._replicate_to_one("host1:8001", "k", "v", 1)
 
             assert res.status == "error"
             assert "500" in res.error
@@ -56,7 +56,7 @@ class TestReplication:
         with patch.object(
             replicator.session, "post", side_effect=Exception("ConnRefused")
         ):
-            res = replicator._replicate_to_one("host1:8001", "k", "v")
+            res = replicator._replicate_to_one("host1:8001", "k", "v", 1)
             assert res.status == "error"
             assert "ConnRefused" in res.error
 
@@ -64,7 +64,7 @@ class TestReplication:
         with patch.object(replicator.session, "post") as mock_post:
             mock_post.return_value.status_code = 200
 
-            results = replicator.replicate("k", "v")
+            results = replicator.replicate("k", "v", 1)
 
             assert len(results) == 2
             assert all(r.status == "ok" for r in results)
@@ -74,7 +74,7 @@ class TestReplication:
         rep = Replicator(["h1"], 0, 0, repl_secret="secret", delay_func=lambda: 0)
         with patch.object(rep.session, "post") as mock_post:
             mock_post.return_value.status_code = 200
-            rep._replicate_to_one("h1", "k", "v")
+            rep._replicate_to_one("h1", "k", "v", 1)
 
             headers = mock_post.call_args[1]["headers"]
             assert headers["X-Replication-Secret"] == "secret"

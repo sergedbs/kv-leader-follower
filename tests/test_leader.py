@@ -105,8 +105,9 @@ class TestLeaderApp:
 
         client.post("/set", json={"key": "k", "value": "v"})
 
-        # Fix: assert called with quorum argument
-        mock_replicator.replicate.assert_called_once_with("k", "v", quorum=2)
+        # Fix: assert called with quorum argument and version
+        # Version should be 1 for the first write
+        mock_replicator.replicate.assert_called_once_with("k", "v", 1, quorum=2)
         assert leader_module.store.get("k") == "v"
 
     def test_set_returns_replication_details(self, client, mock_replicator):

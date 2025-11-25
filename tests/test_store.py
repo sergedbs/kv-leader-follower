@@ -85,3 +85,25 @@ class TestKeyValueStore:
 
         # Just ensure no crashes/deadlocks occurred
         assert store.get("k0") == "v0"
+
+    def test_versioning(self, store):
+        """Test versioning logic."""
+        # Leader mode (auto-increment)
+        v1 = store.set("k", "v1")
+        assert v1 == 1
+        assert store.get("k") == "v1"
+
+        v2 = store.set("k", "v2")
+        assert v2 == 2
+        assert store.get("k") == "v2"
+
+        # Follower mode (explicit version)
+        # Older version should be ignored
+        v_old = store.set("k", "v_old", version=1)
+        assert v_old == 2  # Should return current version
+        assert store.get("k") == "v2"  # Value should not change
+
+        # Newer version should be accepted
+        v_new = store.set("k", "v_new", version=5)
+        assert v_new == 5
+        assert store.get("k") == "v_new"
